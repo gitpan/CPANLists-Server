@@ -1,0 +1,671 @@
+NAME
+    CPANLists::Server - Application that runs on cpanlists.org
+
+VERSION
+    This document describes version 0.02 of CPANLists::Server (from Perl
+    distribution CPANLists-Server), released on 2014-05-17.
+
+SYNOPSIS
+    You probably do not want to install this. This distribution contains the
+    code to run on cpanlists.org.
+
+    For the client program, see App::cpanlists.
+
+DESCRIPTION
+    Currently to use this module, you have to do two things. This is ugly
+    and might change in the future.
+
+    *   Set database handle at startup
+
+         $dbh = DBI->connect(...);
+         CPANLists::Server::__dbh($dbh);
+
+    *   Set PSGI environment for each request
+
+        Mainly so that __activity_log() can get REMOTE_ADDR etc from PSGI
+        environment.
+
+         CPANLists::Server::__env($env);
+
+FUNCTIONS
+  add_item(%args) -> [status, msg, result, meta]
+    Add an item to a list.
+
+    Arguments ('*' denotes required arguments):
+
+    *   comment => *str*
+
+        Comment.
+
+        Will be interpreted as Markdown
+
+    *   list_id* => *int*
+
+    *   name* => *str*
+
+        Item's name (i.e. module name/CPAN ID).
+
+    *   rating => *int*
+
+        Rating.
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  add_list_comment(%args) -> [status, msg, result, meta]
+    Add a comment to a list.
+
+    Arguments ('*' denotes required arguments):
+
+    *   comment* => *str*
+
+        Comment.
+
+        Will be interpreted as Markdown
+
+    *   list_id* => *int*
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  auth_user(%args) -> [status, msg, result, meta]
+    Check username and password against database.
+
+    Upon success, will return a hash of information, currently: "id" (user
+    numeric ID), "email".
+
+    Arguments ('*' denotes required arguments):
+
+    *   password* => *str*
+
+    *   username* => *str*
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  check_session(%args) -> [status, msg, result, meta]
+    Check if session with certain ID exists and not expired.
+
+    Arguments ('*' denotes required arguments):
+
+    *   id* => *str*
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+    Session information (any)
+
+  create_list(%args) -> [status, msg, result, meta]
+    Create a new list.
+
+    Arguments ('*' denotes required arguments):
+
+    *   description => *str*
+
+        A longer (one to several paragraphs) of description.
+
+        Will be interpreted as Markdown.
+
+        For module lists, module names in the form of "Foo::bar" or
+        "mod://Foo::bar" or "mod://foo" will be detected and added as items
+        if indeed are CPAN module names.
+
+    *   items => *array*
+
+        List items.
+
+        Alternatively, you can leave this empty and add items one-by-one
+        using add_item().
+
+    *   name* => *str*
+
+        The list title.
+
+        Examples: "Steven's most favorite modules", "Steven's favorite
+        authors", "Modules to do blah", "Top ten modules you'll want for
+        christmas 2014".
+
+    *   scan_modules_from_description => *bool* (default: 0)
+
+        Whether to scan module names from description and add them as items
+        (for module lists only).
+
+    *   tags => *array*
+
+        Tags.
+
+    *   type* => *str*
+
+        List type, either m (for modules) or a (authors).
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  create_or_get_session(%args) -> [status, msg, result, meta]
+    Arguments ('*' denotes required arguments):
+
+    *   username* => *str*
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  create_user(%args) -> [status, msg, result, meta]
+    Arguments ('*' denotes required arguments):
+
+    *   email* => *str*
+
+    *   first_name => *str*
+
+    *   last_name => *str*
+
+    *   note => *str*
+
+    *   password* => *str*
+
+    *   username* => *str*
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  delete_item(%args) -> [status, msg, result, meta]
+    Delete an item from a list.
+
+    Arguments ('*' denotes required arguments):
+
+    *   list_id* => *int*
+
+    *   name* => *str*
+
+        Item's name (i.e. module name/CPAN ID).
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  delete_list(%args) -> [status, msg, result, meta]
+    Delete a list.
+
+    Arguments ('*' denotes required arguments):
+
+    *   id* => *int*
+
+    *   reason => *str*
+
+        Optional reason for deletion.
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  delete_list_comment(%args) -> [status, msg, result, meta]
+    Delete a single list comment.
+
+    Arguments ('*' denotes required arguments):
+
+    *   id* => *int*
+
+    *   reason => *str*
+
+        Optional reason for deletion.
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  get_bitcard_signin_url() -> [status, msg, result, meta]
+    Get signin URL via BitCard API (bitcard.org).
+
+    To signin via BitCard, first call this function. You will get login URL
+    (to bitcard.org). Go to the login URL and enter your credentials.
+    Afterwards, if the login is correct, you will get return URL like, which
+    you need to follow:
+
+        https://cpanlists.org/api/verify_bitcard_signin?bc_confirmed=1&...
+
+    Either follow this URL, or pass the parameters to the
+    "verify_bitcard_signin" function yourself. If signin is verified, a
+    success status (200) will be returned along with session ID to use.
+    Session ID can be used as password in HTTP authenticaion e.g.:
+
+        curl -u USERNAME:SESSION_ID https://cpanlists.org/api/SOME_FUNC?PARAM1=...
+
+    By default session ID can be used for 6 (six) months. If session is
+    expired, you can signin again.
+
+    No arguments.
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  get_list(%args) -> [status, msg, result, meta]
+    Get details about a list.
+
+    Arguments ('*' denotes required arguments):
+
+    *   id* => *int*
+
+    *   items => *bool* (default: 1)
+
+        Whether to retrieve list's items.
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  get_list_comment(%args) -> [status, msg, result, meta]
+    Get a single list comment.
+
+    Arguments ('*' denotes required arguments):
+
+    *   id* => *int*
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  get_user(%args) -> [status, msg, result, meta]
+    Get user information either by email or username.
+
+    Arguments ('*' denotes required arguments):
+
+    *   email => *str*
+
+    *   username => *str*
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  like_list(%args) -> [status, msg, result, meta]
+    Like a list.
+
+    You are allowed to like your own list.
+
+    Arguments ('*' denotes required arguments):
+
+    *   id* => *int*
+
+        List ID.
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  list_items(%args) -> [status, msg, result, meta]
+    List items of a list.
+
+    Arguments ('*' denotes required arguments):
+
+    *   list_id* => *int*
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  list_list_comments(%args) -> [status, msg, result, meta]
+    List comments to a list.
+
+    Arguments ('*' denotes required arguments):
+
+    *   id => *int*
+
+    *   list_id* => *int*
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  list_lists(%args) -> [status, msg, result, meta]
+    List available lists.
+
+    Arguments ('*' denotes required arguments):
+
+    *   creator => *str*
+
+    *   has_tags => *array*
+
+        Only include lists containing these tags.
+
+    *   id => *int*
+
+    *   lacks_tags => *array*
+
+        Only include lists not containing these tags.
+
+    *   query => *str*
+
+    *   result_limit => *int* (default: 5000)
+
+        Limit number of results.
+
+    *   type => *str*
+
+        Filter only certain type of lists ("a" means lists of authors only,
+        "m" means lists of modules only).
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  unlike_list(%args) -> [status, msg, result, meta]
+    Unlike a list.
+
+    Arguments ('*' denotes required arguments):
+
+    *   id* => *int*
+
+        List ID.
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  update_item(%args) -> [status, msg, result, meta]
+    Update a list item.
+
+    Arguments ('*' denotes required arguments):
+
+    *   list_id* => *int*
+
+    *   name* => *str*
+
+        Item's name.
+
+    *   new_comment => *str*
+
+        Item's new comment.
+
+        If not specified, comment will not be changed
+
+    *   new_rating => *str*
+
+        Item's new rating.
+
+        If not specified, rating will not be changed
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  update_list(%args) -> [status, msg, result, meta]
+    Update a list.
+
+    Arguments ('*' denotes required arguments):
+
+    *   id* => *int*
+
+    *   new_description => *str*
+
+        List's new description.
+
+        If not specified, description will not be changed
+
+    *   new_items => *array*
+
+        List's new items.
+
+        If not specified, items will not be changed
+
+    *   new_name => *str*
+
+        List's new name.
+
+        If not specified, name will not be changed
+
+    *   new_tags => *array*
+
+        List's new tags.
+
+        If not specified, tags will not be changed
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  update_list_comment(%args) -> [status, msg, result, meta]
+    Update a list comment.
+
+    Arguments ('*' denotes required arguments):
+
+    *   id* => *int*
+
+    *   new_comment => *str*
+
+        Comment.
+
+        If not specified, comment will not be replaced.
+
+        Will be interpreted as Markdown.
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+  verify_bitcard_signin(%args) -> [status, msg, result, meta]
+    Verify URL parameters returned by BitCard.
+
+    See "get_bitcard_signin_url" for more information on signing in via
+    BitCard.
+
+    Arguments ('*' denotes required arguments):
+
+    *   bc_confirmed => *any*
+
+    *   bc_email => *any*
+
+    *   bc_fields => *any*
+
+    *   bc_id => *any*
+
+    *   bc_name => *any*
+
+    *   bc_sig => *any*
+
+    *   bc_ts => *any*
+
+    *   bc_username => *any*
+
+    *   bc_version => *any*
+
+    Return value:
+
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+    Session ID (hash) =head1 TODO
+
+SEE ALSO
+    App::cpanlists
+
+HOMEPAGE
+    Please visit the project's homepage at
+    <https://metacpan.org/release/CPANLists-Server>.
+
+SOURCE
+    Source repository is at
+    <https://github.com/sharyanto/perl-CPANLists-Server>.
+
+BUGS
+    Please report any bugs or feature requests on the bugtracker website
+    <https://rt.cpan.org/Public/Dist/Display.html?Name=CPANLists-Server>
+
+    When submitting a bug or request, please include a test-file or a patch
+    to an existing test-file that illustrates the bug or desired feature.
+
+AUTHOR
+    Steven Haryanto <stevenharyanto@gmail.com>
+
+COPYRIGHT AND LICENSE
+    This software is copyright (c) 2014 by Steven Haryanto.
+
+    This is free software; you can redistribute it and/or modify it under
+    the same terms as the Perl 5 programming language system itself.
+
